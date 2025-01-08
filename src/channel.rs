@@ -25,6 +25,7 @@ macro_rules! impl_channels {
 
         $(
             #[doc = $doc]
+            #[derive(Debug, Clone, Copy)]
             pub struct $CH;
 
             $(
