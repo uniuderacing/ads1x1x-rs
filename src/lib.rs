@@ -225,8 +225,9 @@ pub mod ic;
 mod types;
 use crate::types::Config;
 pub use crate::types::{
-    mode, Ads1x1x, ComparatorLatching, ComparatorMode, ComparatorPolarity, ComparatorQueue,
-    DataRate12Bit, DataRate16Bit, Error, FullScaleRange, ModeChangeError, TargetAddr,
+    mode, Ads1x1x, Ads1x1xPin, ComparatorLatching, ComparatorMode, ComparatorPolarity,
+    ComparatorQueue, DataRate12Bit, DataRate16Bit, Error, FullScaleRange, ModeChangeError,
+    TargetAddr,
 };
 
 mod private {
