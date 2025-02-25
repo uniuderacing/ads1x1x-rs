@@ -1,6 +1,8 @@
 //! Common functions.
 
-use crate::{devices::OperatingMode, Ads1x1x, BitFlags, Config, Error, Register};
+use crate::{
+    conversion, devices::OperatingMode, Ads1x1x, Ads1x1xPin, BitFlags, Config, Error, Register,
+};
 
 impl<I2C, IC, CONV, MODE, E> Ads1x1x<I2C, IC, CONV, MODE>
 where
@@ -36,5 +38,46 @@ where
             bits: self.read_register(Register::CONFIG)?,
         };
         Ok(!config.is_high(BitFlags::OS))
+    }
+}
+
+impl<I2C, PIN, IC, CONV, MODE, E> Ads1x1xPin<I2C, PIN, IC, CONV, MODE>
+where
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    PIN: embedded_hal_async::digital::Wait<Error = E>,
+{
+    /// Waits for a measurement to be ready.
+    pub async fn wait_for_measurement(&mut self) -> Result<(), Error<E>> {
+        if self.config.is_high(BitFlags::COMP_POL) {
+            // active high
+            self.alert_pin
+                .wait_for_falling_edge()
+                .await
+                .map_err(Error::AlertPin)
+        } else {
+            // active low
+            self.alert_pin
+                .wait_for_rising_edge()
+                .await
+                .map_err(Error::AlertPin)
+        }
+    }
+}
+
+impl<I2C, PIN, IC, CONV, MODE, E> Ads1x1xPin<I2C, PIN, IC, CONV, MODE>
+where
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    IC: crate::ic::Tier2Features,
+    CONV: conversion::ConvertThreshold<E>,
+{
+    /// Creates a new driver with the alert pin in continuous mode.
+    pub fn new(
+        mut driver: Ads1x1x<I2C, IC, CONV, MODE>,
+        alert_pin: PIN,
+    ) -> nb::Result<Self, Error<E>> {
+        driver.a_conversion_was_started = false;
+        driver.use_alert_rdy_pin_as_ready()?;
+
+        Ok(Ads1x1xPin { driver, alert_pin })
     }
 }

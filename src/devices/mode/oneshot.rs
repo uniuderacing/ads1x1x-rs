@@ -3,8 +3,8 @@
 use core::marker::PhantomData;
 
 use crate::{
-    conversion, devices::OperatingMode, mode, Ads1x1x, BitFlags, ChannelId, Config, Error,
-    ModeChangeError, Register,
+    conversion, devices::OperatingMode, mode, Ads1x1x, Ads1x1xPin, BitFlags, ChannelId, Config,
+    Error, ModeChangeError, Register,
 };
 
 impl<I2C, IC, CONV, E> Ads1x1x<I2C, IC, CONV, mode::OneShot>
@@ -77,5 +77,48 @@ where
         self.config = config;
         self.a_conversion_was_started = true;
         Err(nb::Error::WouldBlock)
+    }
+}
+
+impl<I2C, PIN, IC, CONV, E> Ads1x1xPin<I2C, PIN, IC, CONV, mode::OneShot>
+where
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    CONV: conversion::ConvertMeasurement,
+    PIN: embedded_hal_async::digital::Wait<Error = E>,
+    IC: crate::ic::Tier2Features,
+{
+    /// Changes to continuous operating mode.
+    #[allow(clippy::type_complexity)]
+    pub fn into_continuous(
+        self,
+    ) -> Result<Ads1x1xPin<I2C, PIN, IC, CONV, mode::Continuous>, ModeChangeError<E, Self>> {
+        match self.driver.into_continuous() {
+            Ok(driver) => Ok(Ads1x1xPin {
+                driver,
+                alert_pin: self.alert_pin,
+            }),
+            Err(ModeChangeError::I2C(e, driver)) => Err(ModeChangeError::I2C(
+                e,
+                Ads1x1xPin {
+                    driver,
+                    alert_pin: self.alert_pin,
+                },
+            )),
+        }
+    }
+
+    /// Triggers a measurement and waits for it to be ready.
+    #[allow(unused_variables)]
+    pub async fn read<CH: ChannelId<Self>>(&mut self, channel: CH) -> Result<i16, Error<E>> {
+        let config = self.config.with_mux_bits(CH::channel_id());
+        self.trigger_measurement(&config)?;
+
+        self.config = config;
+
+        self.wait_for_measurement().await?;
+
+        let value = self.read_register(Register::CONVERSION)?;
+
+        Ok(CONV::convert_measurement(value))
     }
 }

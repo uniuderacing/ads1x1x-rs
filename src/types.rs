@@ -9,6 +9,8 @@ pub enum Error<E> {
     I2C(E),
     /// Invalid input data provided
     InvalidInputData,
+    /// Alert pin error
+    AlertPin(E),
 }
 
 /// Error type for mode changes.
@@ -231,6 +233,27 @@ pub struct Ads1x1x<I2C, IC, CONV, MODE> {
     pub(crate) _conv: PhantomData<CONV>,
     pub(crate) _ic: PhantomData<IC>,
     pub(crate) _mode: PhantomData<MODE>,
+}
+
+/// ADS1x1x ADC driver
+#[derive(Debug, Default)]
+pub struct Ads1x1xPin<I2C, PIN, IC, CONV, MODE> {
+    pub(crate) driver: Ads1x1x<I2C, IC, CONV, MODE>,
+    pub(crate) alert_pin: PIN,
+}
+
+impl<I2C, PIN, IC, CONV, MODE> core::ops::Deref for Ads1x1xPin<I2C, PIN, IC, CONV, MODE> {
+    type Target = Ads1x1x<I2C, IC, CONV, MODE>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.driver
+    }
+}
+
+impl<I2C, PIN, IC, CONV, MODE> core::ops::DerefMut for Ads1x1xPin<I2C, PIN, IC, CONV, MODE> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.driver
+    }
 }
 
 #[cfg(test)]
