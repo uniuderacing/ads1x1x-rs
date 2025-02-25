@@ -9,8 +9,8 @@ pub enum Error<E> {
     I2C(E),
     /// Invalid input data provided
     InvalidInputData,
-    /// Pin error
-    Pin(E),
+    /// Alert pin error
+    AlertPin(E),
 }
 
 /// Error type for mode changes.
