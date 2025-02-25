@@ -1,6 +1,6 @@
 //! Common functions.
 
-use crate::{devices::OperatingMode, Ads1x1x, BitFlags, Config, Error, Register};
+use crate::{devices::OperatingMode, Ads1x1x, Ads1x1xPin, BitFlags, Config, Error, Register};
 
 impl<I2C, IC, CONV, MODE, E> Ads1x1x<I2C, IC, CONV, MODE>
 where
@@ -38,3 +38,27 @@ where
         Ok(!config.is_high(BitFlags::OS))
     }
 }
+
+impl<I2C, PIN, IC, CONV, MODE, E> Ads1x1xPin<I2C, PIN, IC, CONV, MODE>
+where
+    I2C: embedded_hal::i2c::I2c<Error = E>,
+    PIN: embedded_hal_async::digital::Wait<Error = E>,
+{
+    /// Waits for a measurement to be ready.
+    pub async fn wait_for_measurement(&mut self) -> Result<(), Error<E>> {
+        if self.config.is_high(BitFlags::COMP_POL) {
+            // active high
+            self.alert_pin
+                .wait_for_falling_edge()
+                .await
+                .map_err(Error::Pin)
+        } else {
+            // active low
+            self.alert_pin
+                .wait_for_rising_edge()
+                .await
+                .map_err(Error::Pin)
+        }
+    }
+}
+

@@ -98,19 +98,7 @@ where
 
     /// Waits for a measurement to be ready and reads it.
     pub async fn read(&mut self) -> Result<i16, Error<E>> {
-        if self.config.is_high(crate::BitFlags::COMP_POL) {
-            // active high
-            self.alert_pin
-                .wait_for_falling_edge()
-                .await
-                .map_err(Error::Pin)?;
-        } else {
-            // active low
-            self.alert_pin
-                .wait_for_rising_edge()
-                .await
-                .map_err(Error::Pin)?;
-        }
+        self.wait_for_measurement().await?;
         let value = self.read_register(Register::CONVERSION)?;
         Ok(CONV::convert_measurement(value))
     }
